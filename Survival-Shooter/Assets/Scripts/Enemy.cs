@@ -1,8 +1,6 @@
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.Audio;
-using System.Collections;
 
 public class Enemy : LivingEntity
 {
@@ -10,18 +8,30 @@ public class Enemy : LivingEntity
     private NavMeshAgent agent;
     private Collider collider;
     private Rigidbody rb;
+    public GameManager manager;
+
+    private AudioSource audioSource;
+    public AudioClip hurtSound;
+    public AudioClip deathSound;
+
+    public GameObject player;
 
     private Transform target;
+    public ParticleSystem hitParticles;
 
     public LayerMask targetLayer;
 
-    public float traceDistance = 10f;
+    public float traceDistance = 20f;
     public float attackDistance = 1f;
 
     public float timer = 0f;
-    public float attackInterval = 1f;
+    public float attackInterval = 0.5f;
 
     public float damage = 10f;
+    public float moveSpeed = 3.5f;
+    public float health = 100;
+
+    private bool hasFirstAttack = false;
 
     public enum Status
     {
@@ -70,6 +80,11 @@ public class Enemy : LivingEntity
         agent = GetComponent<NavMeshAgent>();
         collider = GetComponent<Collider>();
         rb = GetComponent<Rigidbody>();
+        audioSource = GetComponent<AudioSource>();
+
+        agent.speed = moveSpeed;
+        Health = health;
+        hasFirstAttack = false;
     }
 
 
@@ -83,6 +98,7 @@ public class Enemy : LivingEntity
 
     private void Update()
     {
+
         switch (CurrentStatus)
         {
             case Status.Idle:
@@ -95,7 +111,6 @@ public class Enemy : LivingEntity
                 UpdateAttackStatus();
                 break;
             case Status.Die:
-                UpdateDieStatus();
                 break;
         }
 
@@ -136,7 +151,7 @@ public class Enemy : LivingEntity
             return;
         }
 
-        if (target != null || Vector3.Distance(transform.position, target.position) > attackDistance)
+        if (target != null && Vector3.Distance(transform.position, target.position) > attackDistance)
         {
             CurrentStatus = Status.Trace;
             return;
@@ -148,8 +163,9 @@ public class Enemy : LivingEntity
 
         timer += Time.deltaTime;
 
-        if (timer >= attackInterval)
+        if (!hasFirstAttack || timer >= attackInterval)
         {
+
             var damagable = target.GetComponent<IDamagable>();
 
             if (damagable != null)
@@ -158,13 +174,24 @@ public class Enemy : LivingEntity
             }
 
             timer = 0f;
+
+            hasFirstAttack = true;
+
         }
 
     }
 
-    public void UpdateDieStatus()
+    public override void OnDamage(float damage, Vector3 hitPoint, Vector3 hitNormal)
     {
+        if (IsDead)
+            return;
 
+        base.OnDamage(damage, hitPoint, hitNormal);
+
+        audioSource.PlayOneShot(hurtSound, SoundManager.Instance.sfxVolume);
+
+        hitParticles.transform.position = hitPoint;
+        hitParticles.Play();
     }
 
     protected override void Die()
@@ -173,6 +200,14 @@ public class Enemy : LivingEntity
 
         CurrentStatus = Status.Die;
 
+        GameObject gameControllerObj = GameObject.FindGameObjectWithTag("GameController");
+        if (gameControllerObj != null)
+        {
+            GameManager gameManager = gameControllerObj.GetComponent<GameManager>();
+            gameManager.AddScore(100);
+        }
+
+        audioSource.PlayOneShot(deathSound, SoundManager.Instance.sfxVolume);
     }
 
     protected Transform FindTarget(float radius)

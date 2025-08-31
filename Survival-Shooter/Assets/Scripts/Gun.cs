@@ -1,11 +1,13 @@
 using UnityEngine;
-using UnityEngine.Audio;
 using System.Collections;
 
 public class Gun : MonoBehaviour
 {
     public PlayerInput input;
     public Transform firePosition;
+
+    public AudioSource audioSource;
+    public AudioClip shootSound;
 
     public ParticleSystem gunParticles;
 
@@ -20,6 +22,7 @@ public class Gun : MonoBehaviour
     private void Awake()
     {
         lineRenderer = GetComponent<LineRenderer>();
+        audioSource = GetComponent<AudioSource>();
 
         lineRenderer.enabled = false;
         lineRenderer.positionCount = 2;
@@ -72,6 +75,7 @@ public class Gun : MonoBehaviour
     {
         lineRenderer.enabled = true;
         lineRenderer.SetPosition(0, firePosition.position);
+        audioSource.PlayOneShot(shootSound, SoundManager.Instance.sfxVolume);
 
         lineRenderer.SetPosition(1, hitPosition);
 
