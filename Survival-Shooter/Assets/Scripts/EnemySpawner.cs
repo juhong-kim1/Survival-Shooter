@@ -9,7 +9,7 @@ public class EnemySpawner : MonoBehaviour
     public Transform spawnPoint;
 
     float timer = 0f;
-    float spawnInterval = 3f;
+    float spawnInterval = 4f;
     float enemySpawnNumber = 3f;
     float maxRange = 20f;
     private float minRange = 15f;
